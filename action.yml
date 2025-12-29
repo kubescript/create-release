@@ -1,0 +1,53 @@
+name: 'Create Semantic Release'
+description: 'Automatically create semantic versioned releases with release notes'
+author: 'KubeScript'
+branding:
+  icon: 'tag'
+  color: 'blue'
+
+inputs:
+  bump-type:
+    description: 'Version bump type (major, minor, patch, premajor, preminor, prepatch, prerelease)'
+    required: true
+  prefix:
+    description: 'Tag prefix (e.g., v, app-v, service-)'
+    required: true
+  github-token:
+    description: 'GitHub token for creating releases (use secrets.GITHUB_TOKEN)'
+    required: true
+
+outputs:
+  release-tag:
+    description: 'Created release tag (with prefix)'
+    value: ${{ inputs.prefix }}${{ steps.version.outputs.version }}
+  release-version:
+    description: 'Version number without prefix'
+    value: ${{ steps.version.outputs.version }}
+  release-url:
+    description: 'URL of the created release'
+    value: ${{ steps.create-release.outputs.html_url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Fetch all tags
+      shell: bash
+      run: git fetch --tags --force
+
+    - name: Generate next version
+      id: version
+      uses: zwaldowski/semver-release-action@v4
+      with:
+        bump: ${{ inputs.bump-type }}
+        prefix: ${{ inputs.prefix }}
+        github_token: ${{ inputs.github-token }}
+        dry_run: true
+
+    - name: Create Release
+      id: create-release
+      uses: ncipollo/release-action@v1
+      with:
+        generateReleaseNotes: true
+        name: ${{ inputs.prefix }}${{ steps.version.outputs.version }}
+        tag: ${{ inputs.prefix }}${{ steps.version.outputs.version }}
+        token: ${{ inputs.github-token }}
