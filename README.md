@@ -345,6 +345,15 @@ permissions:
 4. **Automated Releases**: Trigger releases automatically on PR merge to main branch
 5. **Changelog**: GitHub auto-generates release notes, but consider maintaining a CHANGELOG.md file
 
+## Acknowledgments
+
+This action uses the following third-party GitHub Actions:
+
+- **[zwaldowski/semver-release-action](https://github.com/zwaldowski/semver-release-action)** - Semantic version calculation
+- **[ncipollo/release-action](https://github.com/ncipollo/release-action)** - Create GitHub releases
+
+Thank you to all the maintainers and contributors of these projects!
+
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request.
