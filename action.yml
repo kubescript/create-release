@@ -43,6 +43,11 @@ runs:
         github_token: ${{ inputs.github-token }}
         dry_run: true
 
+    - name: Get current commit SHA
+      id: commit-sha
+      shell: bash
+      run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
     - name: Create Release
       id: create-release
       uses: ncipollo/release-action@v1
@@ -50,4 +55,5 @@ runs:
         generateReleaseNotes: true
         name: ${{ inputs.prefix }}${{ steps.version.outputs.version }}
         tag: ${{ inputs.prefix }}${{ steps.version.outputs.version }}
+        commit: ${{ steps.commit-sha.outputs.sha }}
         token: ${{ inputs.github-token }}
