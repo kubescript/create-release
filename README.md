@@ -49,9 +49,12 @@ This action requires the full git history with all tags:
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `bump-type` | Version bump type: `major`, `minor`, `patch`, `premajor`, `preminor`, `prepatch`, `prerelease` | Yes | - |
-| `prefix` | Tag prefix (e.g., `v`, `app-v`, `service-`) | Yes | - |
+| `bump-type` | Version bump type: `major`, `minor`, `patch`, `premajor`, `preminor`, `prepatch`, `prerelease`. Ignored when `version` is set. | No\* | `''` |
+| `version` | Explicit version without prefix (e.g. `1.2.3`). When set, overrides `bump-type` — the tag becomes `{prefix}{version}`. | No\* | `''` |
+| `prefix` | Tag prefix (e.g., `v`, `app-v`, `service-`). Leave empty to use `version` verbatim. | No | `''` |
 | `github-token` | GitHub token (use `secrets.GITHUB_TOKEN`) | Yes | - |
+
+\* At least one of `bump-type` or `version` must be provided. `version` takes precedence when both are set.
 
 ## Outputs
 
@@ -99,6 +102,36 @@ jobs:
           prefix: v
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+### Explicit Tag (verbatim)
+
+When the operator provides the exact tag name (no auto-bump, no prefix wrapping):
+
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. 1.2.3 or v1.2.3) — used verbatim'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: kubescript/create-release@v1
+        with:
+          version: ${{ inputs.tag }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+With `prefix` omitted (default `''`), the resulting git tag and `release-version` output equal the input verbatim.
 
 ### Automatic Release on PR Merge
 

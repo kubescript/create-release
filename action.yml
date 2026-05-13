@@ -7,11 +7,17 @@ branding:
 
 inputs:
   bump-type:
-    description: 'Version bump type (major, minor, patch, premajor, preminor, prepatch, prerelease)'
-    required: true
+    description: 'Version bump type (major, minor, patch, premajor, preminor, prepatch, prerelease). Ignored when `version` is set.'
+    required: false
+    default: ''
+  version:
+    description: 'Explicit version without prefix (e.g. 1.2.3). When set, overrides `bump-type` and the tag becomes `{prefix}{version}`.'
+    required: false
+    default: ''
   prefix:
-    description: 'Tag prefix (e.g., v, app-v, service-)'
-    required: true
+    description: 'Tag prefix (e.g., v, app-v, service-). Leave empty to use `version` verbatim as the tag.'
+    required: false
+    default: ''
   github-token:
     description: 'GitHub token for creating releases (use secrets.GITHUB_TOKEN)'
     required: true
@@ -19,10 +25,10 @@ inputs:
 outputs:
   release-tag:
     description: 'Created release tag (with prefix)'
-    value: ${{ inputs.prefix }}${{ steps.version.outputs.version }}
+    value: ${{ inputs.prefix }}${{ steps.resolved.outputs.version }}
   release-version:
     description: 'Version number without prefix'
-    value: ${{ steps.version.outputs.version }}
+    value: ${{ steps.resolved.outputs.version }}
   release-url:
     description: 'URL of the created release'
     value: ${{ steps.create-release.outputs.html_url }}
@@ -34,8 +40,9 @@ runs:
       shell: bash
       run: git fetch --tags --force
 
-    - name: Generate next version
-      id: version
+    - name: Generate next version (auto-bump)
+      id: auto-version
+      if: inputs.version == ''
       uses: zwaldowski/semver-release-action@v6
       with:
         bump: ${{ inputs.bump-type }}
@@ -43,17 +50,30 @@ runs:
         github_token: ${{ inputs.github-token }}
         dry_run: true
 
+    - name: Resolve version
+      id: resolved
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.version }}" ]; then
+          echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+        elif [ -n "${{ steps.auto-version.outputs.version }}" ]; then
+          echo "version=${{ steps.auto-version.outputs.version }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "::error::Either 'version' or 'bump-type' must be provided"
+          exit 1
+        fi
+
     - name: Get current commit SHA
       id: commit-sha
       shell: bash
-      run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+      run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
     - name: Create Release
       id: create-release
       uses: ncipollo/release-action@v1
       with:
         generateReleaseNotes: true
-        name: ${{ inputs.prefix }}${{ steps.version.outputs.version }}
-        tag: ${{ inputs.prefix }}${{ steps.version.outputs.version }}
+        name: ${{ inputs.prefix }}${{ steps.resolved.outputs.version }}
+        tag: ${{ inputs.prefix }}${{ steps.resolved.outputs.version }}
         commit: ${{ steps.commit-sha.outputs.sha }}
         token: ${{ inputs.github-token }}
